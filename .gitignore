@@ -9,3 +9,8 @@ dist/
 *.swp
 
 .vscode/
+
+# 训练输出文件
+outputs/
+*.pth
+*.log

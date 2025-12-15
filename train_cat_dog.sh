@@ -9,7 +9,7 @@ export PYTHONPATH=/home/magic524/projects/no4/dinov2:$PYTHONPATH
 
 # 配置参数
 CONFIG_FILE="/home/magic524/projects/no4/dinov2/dinov2/configs/train/cat_dog_vitb16.yaml"
-OUTPUT_DIR="/home/magic524/projects/no4/dinov2/outputs/cat_dog_vitb16_run1"
+OUTPUT_DIR="/home/magic524/projects/no4/dinov2/outputs/cat_dog_vitb16_run2"
 
 # 创建输出目录
 mkdir -p "$OUTPUT_DIR"
