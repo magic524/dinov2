@@ -155,11 +155,13 @@ def do_train(cfg, model, resume=False):
     OFFICIAL_EPOCH_LENGTH = cfg.train.OFFICIAL_EPOCH_LENGTH
     max_iter = cfg.optim.epochs * OFFICIAL_EPOCH_LENGTH
 
+    # 只在最后保存checkpoint，节省磁盘空间
+    # 每5个epoch保存一次，但只保留最后1个
     periodic_checkpointer = PeriodicCheckpointer(
         checkpointer,
-        period=3 * OFFICIAL_EPOCH_LENGTH,
+        period=5 * OFFICIAL_EPOCH_LENGTH,  # 每5个epoch
         max_iter=max_iter,
-        max_to_keep=3,
+        max_to_keep=1,  # 只保留最后1个checkpoint
     )
 
     # setup data preprocessing
@@ -290,6 +292,11 @@ def do_train(cfg, model, resume=False):
         periodic_checkpointer.step(iteration)
 
         iteration = iteration + 1
+    
+    # 训练结束后保存最终模型
+    logger.info("Training completed, saving final checkpoint...")
+    checkpointer.save("final_model")
+    
     metric_logger.synchronize_between_processes()
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 

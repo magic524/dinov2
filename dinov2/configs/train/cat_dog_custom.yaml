@@ -1,0 +1,123 @@
+# 自定义猫狗数据集的训练配置
+# 适合小数据集和单GPU训练
+train:
+  # 使用自定义数据集
+  dataset_path: CustomImageFolder:split=TRAIN:root=/mnt/e/Datasets/DINO_datasets/cat_dog:extra=/mnt/e/Datasets/DINO_datasets/cat_dog
+  batch_size_per_gpu: 16  # 进一步减小batch size避免xformers错误
+  num_workers: 4  # 减少worker数量
+  OFFICIAL_EPOCH_LENGTH: 500  # 8000张图 / 16 batch = 500 iterations per epoch
+  saveckp_freq: 10  # 每10个epoch保存一次
+  cache_dataset: true
+  seed: 42
+  centering: "centering"
+
+student:
+  arch: vit_small  # 使用小模型
+  patch_size: 14
+  drop_path_rate: 0.1  # 减少drop path
+  layerscale: 1.0e-05
+  drop_path_uniform: true
+  ffn_layer: "mlp"
+  block_chunks: 0
+  qkv_bias: true
+  proj_bias: true
+  ffn_bias: true
+  num_register_tokens: 0
+
+teacher:
+  momentum_teacher: 0.996
+  final_momentum_teacher: 1.0
+  warmup_teacher_temp: 0.04
+  teacher_temp: 0.04  # 降低温度适应小数据集
+  warmup_teacher_temp_epochs: 5  # 减少warmup epochs
+
+dino:
+  loss_weight: 1.0
+  head_n_prototypes: 2048  # 大幅减少prototypes数量
+  head_bottleneck_dim: 256
+  head_nlayers: 3
+  head_hidden_dim: 2048
+  koleo_loss_weight: 0.1
+
+ibot:
+  loss_weight: 1.0
+  mask_sample_probability: 0.5
+  mask_ratio_min_max:
+  - 0.1
+  - 0.5
+  separate_head: false
+  head_n_prototypes: 2048  # 大幅减少prototypes数量
+  head_bottleneck_dim: 256
+  head_nlayers: 3
+  head_hidden_dim: 2048
+
+optim:
+  epochs: 50  # 减少总训练轮数
+  weight_decay: 0.04
+  weight_decay_end: 0.4
+  base_lr: 0.002  # 降低学习率
+  lr: 0.  # will be set after applying scaling rule
+  warmup_epochs: 5  # 减少warmup
+  min_lr: 1.0e-06
+  clip_grad: 3.0
+  freeze_last_layer_epochs: 1
+  scaling_rule: sqrt_wrt_1024
+  patch_embed_lr_mult: 0.2
+  layerwise_decay: 0.9
+  adamw_beta1: 0.9
+  adamw_beta2: 0.999
+
+crops:
+  global_crops_scale:
+  - 0.32
+  - 1.0
+  local_crops_number: 4  # 进一步减少local crops数量
+  local_crops_scale:
+  - 0.05
+  - 0.32
+  global_crops_size: 224
+  local_crops_size: 98  # 98是14的倍数 (98 = 14 * 7)
+
+evaluation:
+  eval_period_iterations: 2500  # 每10个epoch评估一次 (250 iters/epoch * 10)
+
+compute_precision:
+  grad_scaler: true
+  teacher:
+    backbone:
+      sharding_strategy: NO_SHARD  # 单GPU不需要分片
+      mixed_precision:
+        param_dtype: fp16
+        reduce_dtype: fp16
+        buffer_dtype: fp32
+    dino_head:
+      sharding_strategy: NO_SHARD
+      mixed_precision:
+        param_dtype: fp16
+        reduce_dtype: fp16
+        buffer_dtype: fp32
+    ibot_head:
+      sharding_strategy: NO_SHARD
+      mixed_precision:
+        param_dtype: fp16
+        reduce_dtype: fp16
+        buffer_dtype: fp32
+  student:
+    backbone:
+      sharding_strategy: NO_SHARD
+      mixed_precision:
+        param_dtype: fp16
+        reduce_dtype: fp16
+        buffer_dtype: fp32
+    dino_head:
+      sharding_strategy: NO_SHARD
+      mixed_precision:
+        param_dtype: fp16
+        reduce_dtype: fp32
+        buffer_dtype: fp32
+    ibot_head:
+      sharding_strategy: NO_SHARD
+      mixed_precision:
+        param_dtype: fp16
+        reduce_dtype: fp32
+        buffer_dtype: fp32

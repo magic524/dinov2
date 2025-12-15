@@ -95,8 +95,15 @@ class FSDPCheckpointer(Checkpointer):
             return
 
         data = {}
-        with FSDP.state_dict_type(self.model, StateDictType.LOCAL_STATE_DICT):
-            data["model"] = self.model.state_dict()
+        # 对于单GPU或NO_SHARD策略，使用FULL_STATE_DICT
+        # 对于多GPU分片策略，使用LOCAL_STATE_DICT
+        try:
+            with FSDP.state_dict_type(self.model, StateDictType.FULL_STATE_DICT):
+                data["model"] = self.model.state_dict()
+        except RuntimeError:
+            # 如果FULL_STATE_DICT失败，回退到LOCAL_STATE_DICT
+            with FSDP.state_dict_type(self.model, StateDictType.LOCAL_STATE_DICT):
+                data["model"] = self.model.state_dict()
 
         # data["model"] = self.model.state_dict()
         for key, obj in self.checkpointables.items():
